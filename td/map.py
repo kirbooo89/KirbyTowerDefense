@@ -5,9 +5,10 @@ class Map:
     def __init__(self):
         self.image = pygame.image.load("assets/map.png").convert_alpha()
         self.path_width = 30
+        self.tower_radius = 20  # 👈 added
         self.ui_height = 400
 
-    def draw(self, screen):                        # 👈 this was missing
+    def draw(self, screen):
         screen.blit(self.image, (0, 0))
 
     def is_buildable(self, pos):
@@ -17,9 +18,10 @@ class Map:
         if y >= self.ui_height:
             return False
 
-        # -------- BLOCK PATH --------
+        # -------- BLOCK PATH (including tower radius) --------
+        clearance = self.path_width // 2 + self.tower_radius  # 15 + 10 = 25
         for i in range(len(PATH) - 1):
-            if self._point_near_segment(x, y, PATH[i], PATH[i + 1], self.path_width // 2):
+            if self._point_near_segment(x, y, PATH[i], PATH[i + 1], clearance):
                 return False
 
         return True
