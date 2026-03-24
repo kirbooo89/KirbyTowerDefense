@@ -47,9 +47,9 @@ class Projectile:
         direction = self.target.pos - self.pos
 
         if direction.length() < 5:
-            # -------- HIT! --------
             self.target.health -= self.damage
-            self.hit_sound.play()   # 👈 play sound on impact
+            self.target.flash()  # 👈 trigger flash on the enemy
+            self.hit_sound.play()
             self.alive = False
             return
 

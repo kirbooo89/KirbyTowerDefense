@@ -5,9 +5,9 @@ class Tower:
     def __init__(self, pos):
         self.pos = pygame.Vector2(pos)
         self.range = 120
-        self.fire_rate = 0.8
+        self.fire_rate = 0.5
         self.timer = 0
-        self.damage = 5
+        self.damage = 15
         self.selected = False  # 👈 added
 
         # -------- LOAD ATTACK SPRITE SHEET --------
