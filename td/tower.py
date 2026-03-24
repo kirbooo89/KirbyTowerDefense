@@ -7,7 +7,7 @@ class Tower:
         self.range = 120
         self.fire_rate = 0.5
         self.timer = 0
-        self.damage = 15
+        self.damage = 20
         self.selected = False  # 👈 added
 
         # -------- LOAD ATTACK SPRITE SHEET --------
