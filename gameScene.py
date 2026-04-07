@@ -3,8 +3,9 @@ import math
 from td.map import Map
 from td.enemy import Enemy
 from td.tower import Tower
-from td.tower2 import Tower2          # 👈 import
+from td.tower2 import Tower2
 from td.mainTower import MainTower
+from td.towerStatsWindow import TowerStatsWindow      # 👈
 
 class GameScene:
     def __init__(self):
@@ -25,27 +26,25 @@ class GameScene:
         self.tower_button_rect = pygame.Rect(49, 417, 36, 36)
         self.tower1_cost = 75
 
-        # -------- TOWER 2 BUTTON --------                           # 👈 new
+        # -------- TOWER 2 BUTTON --------
         self.tower2_button_img = pygame.image.load("assets/tower2_button.png").convert_alpha()
-        # grab just the first frame for the button
-        t2_frame = self.tower2_button_img.subsurface(pygame.Rect(0, 0,36, 36))
+        t2_frame = self.tower2_button_img.subsurface(pygame.Rect(0, 0, 36, 36))
         self.tower2_button_img = pygame.transform.scale(t2_frame, (36, 36))
-        self.tower2_button_rect = pygame.Rect(133, 417, 36, 36)       # next to tower 1 button
+        self.tower2_button_rect = pygame.Rect(133, 417, 36, 36)
         self.tower2_cost = 50
 
         # -------- PLACEMENT STATE --------
-        self.placing_tower = None   # None, "tower1", or "tower2"        # 👈 changed from bool
+        self.placing_tower = None
 
         # -------- PLACEMENT PREVIEW — TOWER 1 --------
         t1_idle = pygame.image.load("assets/tower_idle.png").convert_alpha()
         frame_width = t1_idle.get_width() // 5
-        frame_width = t1_idle.get_width() // 5
         frame_height = t1_idle.get_height()
         frame = t1_idle.subsurface(pygame.Rect(0, 0, frame_width, frame_height))
-        self.tower1_preview_img = pygame.transform.scale(frame, (frame_width * 1.5, frame_height * 1.5)).copy()
+        self.tower1_preview_img = pygame.transform.scale(frame, (int(frame_width * 1.5), int(frame_height * 1.5))).copy()
         self.tower1_preview_img.set_alpha(120)
 
-        # -------- PLACEMENT PREVIEW — TOWER 2 --------              # 👈 new
+        # -------- PLACEMENT PREVIEW — TOWER 2 --------
         t2_idle = pygame.image.load("assets/spark_tower_idle.png").convert_alpha()
         t2_frame = t2_idle.subsurface(pygame.Rect(0, 0, 48, 48))
         self.tower2_preview_img = pygame.transform.scale(t2_frame, (96, 96)).copy()
@@ -53,11 +52,27 @@ class GameScene:
 
         self.tower_radius = 10
         self.tower1_range = 120
-        self.tower2_aoe = 40        # must match Tower2.aoe_radius      # 👈 new
+        self.tower2_aoe = 40
 
-        # -------- ERROR SOUND --------
+        # -------- TOWER STATS WINDOW --------
+        self.stats_window = TowerStatsWindow()          # 👈
+
+        # -------- SOUNDS --------
         self.error_sound = pygame.mixer.Sound("assets/error.wav")
         self.error_sound.set_volume(0.6)
+
+        self.tower_select_sound = pygame.mixer.Sound("assets/tower_select.wav")
+        self.tower_select_sound.set_volume(0.6)
+
+        self.tower_cancel_sound = pygame.mixer.Sound("assets/tower_cancel.wav")
+        self.tower_cancel_sound.set_volume(0.6)
+
+        self.tower_placement_sound = pygame.mixer.Sound("assets/tower_placement.mp3")
+        self.tower_placement_sound.set_volume(0.6)
+
+        self.gameover_sound = pygame.mixer.Sound("assets/gameover.mp3")
+        self.gameover_sound.set_volume(0.8)
+        self.gameover_played = False
 
         # -------- BGM --------
         pygame.mixer.music.load("assets/bgm1.mp3")
@@ -114,6 +129,18 @@ class GameScene:
         e.speed = self._wave_mob_speed(self.current_wave)
         return e
 
+    def _cancel_placement(self):
+        if self.placing_tower is not None:
+            self.tower_cancel_sound.play()
+        self.placing_tower = None
+
+    def _selected_tower(self):
+        """Returns the currently selected tower, or None."""
+        for tower in self.towers:
+            if tower.selected:
+                return tower
+        return None
+
     # --------------------------------------------------------
     #  EVENTS
     # --------------------------------------------------------
@@ -121,27 +148,36 @@ class GameScene:
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_x:
-                self.placing_tower = None
+                self._cancel_placement()
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 3:
-                self.placing_tower = None
+                self._cancel_placement()
                 return
 
             if event.button == 1:
+
+                # -------- STATS WINDOW UPGRADE BUTTON (checked first) --------
+                selected = self._selected_tower()
+                if selected is not None:
+                    self.gold = self.stats_window.handle_event(event, selected, self.gold)  # 👈
+                    if self.stats_window.btn_rect.collidepoint(event.pos):
+                        return  # consumed by stats window, don't fall through
 
                 # -------- TOWER 1 BUTTON --------
                 if self.tower_button_rect.collidepoint(event.pos):
                     if self.gold >= self.tower1_cost:
                         self.placing_tower = "tower1"
                         self._deselect_all_towers()
+                        self.tower_select_sound.play()
                     return
 
-                # -------- TOWER 2 BUTTON --------                   # 👈 new
+                # -------- TOWER 2 BUTTON --------
                 if self.tower2_button_rect.collidepoint(event.pos):
                     if self.gold >= self.tower2_cost:
                         self.placing_tower = "tower2"
                         self._deselect_all_towers()
+                        self.tower_select_sound.play()
                     return
 
                 # -------- PLACE TOWER --------
@@ -151,14 +187,13 @@ class GameScene:
                     if not self.map.is_buildable(pos) or too_close:
                         self.error_sound.play()
                         return
-
-                    if self.placing_tower == "tower1":               # 👈 changed
+                    if self.placing_tower == "tower1":
                         self.towers.append(Tower(pos))
                         self.gold -= self.tower1_cost
-                    elif self.placing_tower == "tower2":             # 👈 new
+                    elif self.placing_tower == "tower2":
                         self.towers.append(Tower2(pos))
                         self.gold -= self.tower2_cost
-
+                    self.tower_placement_sound.play()
                     self.placing_tower = None
                     return
 
@@ -168,6 +203,12 @@ class GameScene:
                         tower.selected = not tower.selected
                     else:
                         tower.selected = False
+
+        # -------- MOUSE BUTTON UP — reset pressed state --------
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            selected = self._selected_tower()
+            if selected is not None:
+                self.stats_window.handle_event(event, selected, self.gold)  # 👈 for btn release
 
     def _deselect_all_towers(self):
         for tower in self.towers:
@@ -184,6 +225,10 @@ class GameScene:
         if not self.main_tower.alive:
             self.wave_state = "result"
             self.result = "defeat"
+            if not self.gameover_played:
+                pygame.mixer.music.stop()
+                self.gameover_sound.play()
+                self.gameover_played = True
             return None
 
         if self.wave_state == "countdown":
@@ -249,7 +294,7 @@ class GameScene:
             grey.fill((0, 0, 0, 120))
             screen.blit(grey, self.tower_button_rect)
 
-        # -------- TOWER 2 BUTTON --------                           # 👈 new
+        # -------- TOWER 2 BUTTON --------
         screen.blit(self.tower2_button_img, self.tower2_button_rect)
         if self.placing_tower == "tower2":
             pygame.draw.rect(screen, (255, 255, 0), self.tower2_button_rect, 2)
@@ -267,6 +312,11 @@ class GameScene:
         for enemy in self.enemies:
             enemy.draw(screen)
 
+        # -------- TOWER STATS WINDOW --------
+        selected = self._selected_tower()
+        if selected is not None:                                    # 👈
+            self.stats_window.draw(screen, selected, self.gold)
+
         # -------- PLACEMENT PREVIEW --------
         if self.placing_tower:
             mouse_pos = pygame.mouse.get_pos()
@@ -279,7 +329,6 @@ class GameScene:
             pygame.draw.circle(circle_surf, color, (radius, radius), radius)
             screen.blit(circle_surf, circle_surf.get_rect(center=mouse_pos))
 
-            # -------- RANGE PREVIEW — differs per tower type --------
             if self.placing_tower == "tower1":
                 preview_range = self.tower1_range
                 range_color = (60, 60, 200, 60)
@@ -304,7 +353,6 @@ class GameScene:
         wave_text = self.debug_font.render(f"Wave: {self.current_wave} / {self.total_waves}", True, (255, 255, 255))
         screen.blit(wave_text, (10, 30))
 
-        # -------- COUNTDOWN OVERLAY --------
         if self.wave_state == "countdown":
             next_wave = self.current_wave + 1
             seconds_left = math.ceil(self.countdown_timer)
@@ -313,7 +361,6 @@ class GameScene:
             screen.blit(title, title.get_rect(center=(320, 180)))
             screen.blit(subtitle, subtitle.get_rect(center=(320, 250)))
 
-        # -------- VICTORY / DEFEAT OVERLAY --------
         if self.wave_state == "result":
             overlay = pygame.Surface((640, 480), pygame.SRCALPHA)
             overlay.fill((0, 0, 0, 160))

@@ -4,10 +4,32 @@ class Tower2:
     def __init__(self, pos):
         self.pos = pygame.Vector2(pos)
         self.range = 120
-        self.fire_rate = 0.8        # seconds between AOE bursts
+        self.fire_rate = 1.0
         self.timer = 0
-        self.damage = 12             # AOE damage per burst
+        self.damage = 8
         self.selected = False
+
+        # -------- IDENTITY --------
+        self.name = "Spark Tower"
+        self.icon_path = "assets/tower2_button.png"
+
+        # -------- UPGRADE --------
+        self.level = 0
+        self.max_level = 10
+        self.upgrade_costs = [50, 70, 95, 125, 160, 200, 245, 295, 350, 415]
+        # each entry: (damage, fire_rate)
+        self.upgrade_stats = [
+            (11, 0.95),
+            (15, 0.90),
+            (19, 0.85),
+            (24, 0.80),
+            (30, 0.75),
+            (37, 0.70),
+            (45, 0.65),
+            (54, 0.60),
+            (65, 0.55),
+            (78, 0.50),
+        ]
 
         # -------- LOAD IDLE SPRITE SHEET (48x48, 6 frames) --------
         idle_sheet = pygame.image.load("assets/spark_tower_idle.png").convert_alpha()
@@ -39,50 +61,59 @@ class Tower2:
         self.is_attacking = False
 
         # -------- AOE RADIUS --------
-        # idle sprite is 48px, attack sprite is 64px
-        # the extra 16px (8 on each side) defines the AOE damage zone
-        self.aoe_radius = (IDLE_FRAME_SIZE // 2 + 16) * SCALE   # = 40px scaled
+        self.aoe_radius = (IDLE_FRAME_SIZE // 2 + 16) * SCALE
+
+        # -------- ATTACK SOUND --------
+        self.attack_sound = pygame.mixer.Sound("assets/spark_tower_attack.mp3")
+        self.attack_sound.set_volume(0.6)
+
+    def upgrade(self):
+        if self.level >= self.max_level:
+            return
+        dmg, fr = self.upgrade_stats[self.level]
+        self.damage = dmg
+        self.fire_rate = fr
+        self.level += 1
+
+    def upgrade_cost(self):
+        if self.level >= self.max_level:
+            return None
+        return self.upgrade_costs[self.level]
 
     def update(self, dt, enemies, projectiles):
         self.timer -= dt
 
-        # -------- TICK ANIMATION --------
         self.anim_timer += dt
         if self.anim_timer >= self.anim_speed:
             self.anim_timer = 0
             self.frame_index += 1
 
             if self.is_attacking:
-                # -------- DEAL AOE DAMAGE ON FIRST FRAME --------
                 if self.frame_index == 1:
                     for enemy in enemies:
                         if enemy.alive and self.pos.distance_to(enemy.pos) <= self.aoe_radius:
                             enemy.health -= self.damage
                             enemy.flash()
-
                 if self.frame_index >= len(self.attack_frames):
                     self.frame_index = 0
                     self.is_attacking = False
             else:
                 self.frame_index = self.frame_index % len(self.idle_frames)
 
-        # -------- TRIGGER ATTACK --------
         if self.timer <= 0:
-            # only attack if at least one enemy is in range
             for enemy in enemies:
                 if enemy.alive and self.pos.distance_to(enemy.pos) <= self.aoe_radius:
                     self.is_attacking = True
                     self.frame_index = 0
                     self.anim_timer = 0
                     self.timer = self.fire_rate
+                    self.attack_sound.play()
                     break
 
     def draw(self, screen):
-        # -------- RANGE RING ONLY IF SELECTED --------
         if self.selected:
             pygame.draw.circle(screen, (200, 100, 255), self.pos, self.aoe_radius, 1)
 
-        # -------- DRAW SPRITE --------
         frames = self.attack_frames if self.is_attacking else self.idle_frames
         image = frames[self.frame_index]
         rect = image.get_rect(center=self.pos)
