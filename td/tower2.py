@@ -6,7 +6,7 @@ class Tower2:
         self.range = 120
         self.fire_rate = 1.0
         self.timer = 0
-        self.damage = 8
+        self.damage = 80
         self.selected = False
 
         # -------- IDENTITY --------

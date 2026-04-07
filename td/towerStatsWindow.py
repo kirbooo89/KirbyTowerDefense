@@ -3,13 +3,13 @@ import pygame
 class TowerStatsWindow:
     def __init__(self):
         # -------- BACKGROUND --------
-        self.bg_img = pygame.image.load("../assets/tower_stats.png").convert_alpha()
+        self.bg_img = pygame.image.load("assets/tower_stats.png").convert_alpha()
         self.bg_pos = (10, 114)     # topleft
 
         # -------- UPGRADE BUTTON IMAGES --------
-        self.btn_released    = pygame.image.load("../assets/upgrade_released.png").convert_alpha()
-        self.btn_pressed     = pygame.image.load("../assets/upgrade_pressed.png").convert_alpha()
-        self.btn_unavailable = pygame.image.load("../assets/upgrade_unavailable.png").convert_alpha()
+        self.btn_released    = pygame.image.load("assets/upgrade_released.png").convert_alpha()
+        self.btn_pressed     = pygame.image.load("assets/upgrade_pressed.png").convert_alpha()
+        self.btn_unavailable = pygame.image.load("assets/upgrade_unavailable.png").convert_alpha()
 
         self.btn_released    = pygame.transform.scale(self.btn_released,    (32, 32))
         self.btn_pressed     = pygame.transform.scale(self.btn_pressed,     (32, 32))
@@ -23,7 +23,7 @@ class TowerStatsWindow:
         )
 
         # -------- FONT --------
-        self.font = pygame.font.Font("../assets/BoldPixels.ttf", 12)
+        self.font = pygame.font.Font("assets/BoldPixels.ttf", 12)
 
         # -------- BUTTON STATE --------
         self.btn_is_pressed = False
