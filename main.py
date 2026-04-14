@@ -9,7 +9,7 @@ from kirbySelectionScene import KirbySelectionScene
 pygame.init()
 pygame.mixer.init()
 screen = pygame.display.set_mode((640, 480))
-pygame.display.set_caption("Scene Transition Test")
+pygame.display.set_caption("Kirby Tower Defense DEMO")
 clock = pygame.time.Clock()
 
 SCENES = {
