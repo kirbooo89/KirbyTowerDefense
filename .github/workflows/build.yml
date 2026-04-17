@@ -1,0 +1,43 @@
+name: Build Game
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # allows manual trigger from GitHub website
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pygame pyinstaller
+
+      - name: Build on Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          pyinstaller --onefile --windowed --add-data "assets;assets" main.py
+
+      - name: Build on Mac
+        if: matrix.os == 'macos-latest'
+        run: |
+          pyinstaller --onefile --windowed --add-data "assets:assets" main.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KirbyTowerDefense-${{ matrix.os }}
+          path: dist/
